@@ -92,12 +92,12 @@ const checkEmailAvailability = async (req, res) => {
     const { email } = req.query;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return sendResponse(res, 400, { message: "Email already exists" });
+      return res.status(409).json({ message: "Email already exists" });
     }
-    sendResponse(res, 200, { message: "Email is available" });
+    res.status(200).json({ message: "Email available" });
   } catch (error) {
     logger.error(`Error in checkEmailAvailability: ${error.message}`);
-    sendResponse(res, 500, { message: "Internal Server Error" });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
