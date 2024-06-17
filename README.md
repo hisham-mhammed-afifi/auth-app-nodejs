@@ -38,8 +38,8 @@ This project is a Node.js application that provides a robust authentication syst
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/your-username/auth-api.git
-   cd auth-api
+   git clone https://github.com/hisham-mhammed-afifi/auth-app-nodejs.git
+   cd auth-app-nodejs
    ```
 
 2. **Install dependencies**
@@ -79,9 +79,8 @@ Make sure to replace `your_secret_key` with a strong secret key. Adjust other co
 
 Access the Swagger UI for API documentation at:
 
-```
-http://localhost:3000/api-docs
-```
+- Local: http://localhost:3000/api-docs
+- Production: [your-production-url]/api-docs
 
 ## Project Structure
 
