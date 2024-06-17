@@ -80,7 +80,7 @@ Make sure to replace `your_secret_key` with a strong secret key. Adjust other co
 Access the Swagger UI for API documentation at:
 
 - Local: http://localhost:3000/api-docs
-- Production: [your-production-url]/api-docs
+- Production: https://auth-app-nodejs-fuco.onrender.com/api-docs
 
 ## Project Structure
 

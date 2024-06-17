@@ -14,6 +14,10 @@ const options = {
         url: "http://localhost:3000",
         description: "Development server",
       },
+      {
+        url: "https://auth-app-nodejs-fuco.onrender.com",
+        description: "Production server",
+      },
     ],
   },
   apis: ["./routes/*.js"], // Path to the API docs
