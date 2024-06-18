@@ -4,9 +4,21 @@ const User = require("../models/User");
 const logger = require("../config/logger");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const Joi = require("joi");
+
+const registerSchema = Joi.object({
+  username: Joi.string().min(3).required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).required(),
+});
 
 const register = async (req, res) => {
   try {
+    const { error } = registerSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
     const { username, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
@@ -184,6 +196,30 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { username, email } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { username, email },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Profile updated successfully", user: updatedUser });
+  } catch (error) {
+    logger.error(`Error in updateProfile: ${error.message}`);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -192,4 +228,5 @@ module.exports = {
   checkEmailAvailability,
   requestPasswordReset,
   resetPassword,
+  updateProfile,
 };
