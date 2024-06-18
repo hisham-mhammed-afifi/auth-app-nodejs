@@ -5,6 +5,8 @@ const {
   refreshToken,
   logout,
   checkEmailAvailability,
+  requestPasswordReset,
+  resetPassword,
 } = require("../controllers/auth.controller");
 const router = express.Router();
 
@@ -198,5 +200,81 @@ router.post("/logout", logout);
  *         description: Internal server error
  */
 router.get("/check-email", checkEmailAvailability);
+
+/**
+ * @swagger
+ * /api/auth/request-password-reset:
+ *   post:
+ *     summary: Request a password reset link
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *             example:
+ *               email: johndoe@example.com
+ *     responses:
+ *       200:
+ *         description: Password reset link sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/request-password-reset", requestPasswordReset);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset the password using the provided token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *             example:
+ *               token: your_reset_token
+ *               email: johndoe@example.com
+ *               newPassword: newpassword123
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Invalid or expired token
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/reset-password", resetPassword);
 
 module.exports = router;
