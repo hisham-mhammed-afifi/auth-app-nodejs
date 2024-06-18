@@ -56,6 +56,9 @@ This project is a Node.js application that provides a robust authentication syst
    JWT_SECRET=your_secret_key
    JWT_EXPIRATION=15m
    JWT_REFRESH_EXPIRATION=7d
+   EMAIL_USER=your_email@emil.com
+   EMAIL_PASS=12345678
+   FRONTEND_URL=http://localhost:4200
    ```
 
 ## Configuration
