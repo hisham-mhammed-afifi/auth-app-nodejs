@@ -81,12 +81,12 @@ router.post("/register", register);
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               email:
  *                 type: string
  *               password:
  *                 type: string
  *             example:
- *               username: johndoe
+ *               email: johndoe@example.com
  *               password: password123
  *     responses:
  *       200:
