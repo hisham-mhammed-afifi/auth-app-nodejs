@@ -6,24 +6,33 @@ const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const Joi = require("joi");
 
+const {
+  ValidationError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  JsonWebTokenError,
+  TokenExpiredError,
+} = require("../errors/custom.errors");
+
 const registerSchema = Joi.object({
   username: Joi.string().min(3).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
 });
 
-const register = async (req, res) => {
+const register = async (req, res, next) => {
   try {
     const { error } = registerSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({ message: error.details[0].message });
+      throw new ValidationError(error.details[0].message);
     }
 
     const { username, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      throw new ValidationError("Email already exists");
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -33,31 +42,47 @@ const register = async (req, res) => {
       .status(201)
       .json({ message: "User registered successfully", userId: newUser._id });
   } catch (error) {
-    logger.error(`Error in register: ${error.message}`);
-    res.status(500).json({ message: "Internal Server Error" });
+    logger.error(`Error in register: ${error.message}`, { requestId: req.id });
+    next(error);
   }
 };
 
-const login = async (req, res) => {
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_TIME = 1 * 60 * 60 * 1000; // 1 hour
+
+const login = async (req, res, next) => {
   try {
-    const { username, password } = req.body;
-    const user = await User.findOne({ username });
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      throw new UnauthorizedError("Invalid credentials");
+    }
+
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      throw new ForbiddenError("Account temporarily locked");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      user.loginAttempts += 1;
+      if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+        user.lockUntil = Date.now() + LOCK_TIME;
+      }
+      await user.save();
+      throw new UnauthorizedError("Invalid credentials");
     }
 
+    user.loginAttempts = 0;
+    user.lockUntil = undefined;
+    await user.save();
+
     const accessToken = jwt.sign(
-      { username: user.username },
+      { email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRATION }
     );
     const refreshToken = jwt.sign(
-      { username: user.username },
+      { email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_REFRESH_EXPIRATION }
     );
@@ -68,59 +93,67 @@ const login = async (req, res) => {
       expiresIn: process.env.JWT_EXPIRATION,
     });
   } catch (error) {
-    logger.error(`Error in login: ${error.message}`);
-    res.status(500).json({ message: "Internal Server Error" });
+    logger.error(`Error in login: ${error.message}`, { requestId: req.id });
+    next(error);
   }
 };
 
-const refreshToken = (req, res) => {
-  const { refreshToken } = req.body;
-  if (refreshToken == null) {
-    return res.status(401).json({ message: "No refresh token provided" });
-  }
-
-  jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: "Invalid refresh token" });
+const refreshToken = (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      throw new JsonWebTokenError("No refresh token provided");
     }
 
-    const accessToken = jwt.sign(
-      { username: user.username },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRATION }
-    );
-    res.status(200).json({
-      accessToken,
-      expiresIn: process.env.JWT_EXPIRATION,
+    jwt.verify(refreshToken, process.env.JWT_SECRET, (err, user) => {
+      if (err) {
+        throw new ForbiddenError("Invalid refresh token");
+      }
+
+      const accessToken = jwt.sign(
+        { username: user.username },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRATION }
+      );
+      res.status(200).json({
+        accessToken,
+        expiresIn: process.env.JWT_EXPIRATION,
+      });
     });
-  });
+  } catch (error) {
+    logger.error(`Error in refreshToken: ${error.message}`, {
+      requestId: req.id,
+    });
+    next(error);
+  }
 };
 
 const logout = (req, res) => {
-  // Invalidate the refresh token here (e.g., by removing it from a database)
   res.status(200).json({ message: "Logout successful" });
 };
 
-const checkEmailAvailability = async (req, res) => {
+const checkEmailAvailability = async (req, res, next) => {
   try {
     const { email } = req.query;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(409).json({ message: "Email already exists" });
+      throw new ValidationError("Email already exists");
     }
     res.status(200).json({ message: "Email available" });
   } catch (error) {
-    logger.error(`Error in checkEmailAvailability: ${error.message}`);
-    res.status(500).json({ message: "Internal Server Error" });
+    logger.error(`Error in checkEmailAvailability: ${error.message}`, {
+      requestId: req.id,
+    });
+    next(error);
   }
 };
 
-const requestPasswordReset = async (req, res) => {
+const requestPasswordReset = async (req, res, next) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      throw new NotFoundError("User not found");
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
@@ -132,9 +165,10 @@ const requestPasswordReset = async (req, res) => {
 
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}&email=${email}`;
 
-    // Send email (Configure your email service)
     const transporter = nodemailer.createTransport({
-      service: "Gmail",
+      host: "smtp.ethereal.email",
+      port: 587,
+      secure: false, // Use `true` for port 465, `false` for all other ports
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -155,17 +189,19 @@ const requestPasswordReset = async (req, res) => {
 
     res.status(200).json({ message: "Password reset link sent" });
   } catch (error) {
-    logger.error(`Error in requestPasswordReset: ${error.message}`);
-    res.status(500).json({ message: "Internal Server Error" });
+    logger.error(`Error in requestPasswordReset: ${error.message}`, {
+      requestId: req.id,
+    });
+    next(error);
   }
 };
 
-const resetPassword = async (req, res) => {
+const resetPassword = async (req, res, next) => {
   try {
     const { token, email, newPassword } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      throw new NotFoundError("User not found");
     }
 
     if (
@@ -173,14 +209,12 @@ const resetPassword = async (req, res) => {
       !user.resetPasswordExpires ||
       Date.now() > user.resetPasswordExpires
     ) {
-      return res
-        .status(400)
-        .json({ message: "Password reset token is invalid or has expired" });
+      throw new ValidationError("Invalid or expired token");
     }
 
     const isTokenValid = await bcrypt.compare(token, user.resetPasswordToken);
     if (!isTokenValid) {
-      return res.status(400).json({ message: "Invalid token" });
+      throw new JsonWebTokenError("Invalid token");
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -191,12 +225,14 @@ const resetPassword = async (req, res) => {
 
     res.status(200).json({ message: "Password reset successful" });
   } catch (error) {
-    logger.error(`Error in resetPassword: ${error.message}`);
-    res.status(500).json({ message: "Internal Server Error" });
+    logger.error(`Error in resetPassword: ${error.message}`, {
+      requestId: req.id,
+    });
+    next(error);
   }
 };
 
-const updateProfile = async (req, res) => {
+const updateProfile = async (req, res, next) => {
   try {
     const { userId } = req.params;
     const { username, email } = req.body;
@@ -208,15 +244,17 @@ const updateProfile = async (req, res) => {
     );
 
     if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
+      throw new NotFoundError("User not found");
     }
 
     res
       .status(200)
       .json({ message: "Profile updated successfully", user: updatedUser });
   } catch (error) {
-    logger.error(`Error in updateProfile: ${error.message}`);
-    res.status(500).json({ message: "Internal Server Error" });
+    logger.error(`Error in updateProfile: ${error.message}`, {
+      requestId: req.id,
+    });
+    next(error);
   }
 };
 

@@ -11,10 +11,10 @@ This project is a Node.js application that provides a robust authentication syst
   - [Installation](#installation)
   - [Configuration](#configuration)
   - [Running the Application](#running-the-application)
+  - [Running Tests](#running-tests)
   - [API Documentation](#api-documentation)
   - [Project Structure](#project-structure)
   - [License](#license)
-  - [Contributing](#contributing)
   - [Contact](#contact)
 
 ## Features
@@ -49,16 +49,18 @@ This project is a Node.js application that provides a robust authentication syst
    ```
 
 3. **Create an environment configuration file**
+
    Create a `.env` file in the root directory with the following content:
+
    ```env
    PORT=3000
    MONGODB_URI=mongodb://localhost:27017/auth-app
    JWT_SECRET=your_secret_key
    JWT_EXPIRATION=15m
    JWT_REFRESH_EXPIRATION=7d
-   EMAIL_USER=your_email@emil.com
-   EMAIL_PASS=12345678
-   FRONTEND_URL=http://localhost:4200
+   EMAIL_USER=your_email@example.com
+   EMAIL_PASS=your_email_password
+   FRONTEND_URL=your_host_client_url
    ```
 
 ## Configuration
@@ -68,6 +70,7 @@ Make sure to replace `your_secret_key` with a strong secret key. Adjust other co
 ## Running the Application
 
 1. **Start the MongoDB server**
+
    Ensure MongoDB is running on your local machine or adjust the `MONGODB_URI` in the `.env` file to point to your MongoDB server.
 
 2. **Start the application**
@@ -78,12 +81,26 @@ Make sure to replace `your_secret_key` with a strong secret key. Adjust other co
 
    The server will start on the port specified in the `.env` file (default is 3000).
 
+## Running Tests
+
+1. **Ensure MongoDB is running**
+
+   Ensure MongoDB is running on your local machine or adjust the `MONGODB_URI` in the `.env` file to point to your MongoDB test server.
+
+2. **Run the tests**
+
+   ```bash
+   npm test
+   ```
+
+   This command will execute the unit tests using Jest.
+
 ## API Documentation
 
 Access the Swagger UI for API documentation at:
 
-- Local: http://localhost:3000/api-docs
-- Production: https://auth-app-nodejs-fuco.onrender.com/api-docs
+- Local: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+- Production: [https://auth-app-nodejs-fuco.onrender.com/api-docs](https://auth-app-nodejs-fuco.onrender.com/api-docs)
 
 ## Project Structure
 
@@ -94,12 +111,15 @@ Access the Swagger UI for API documentation at:
     logger.js       # Logger configuration
   /controllers
     auth.controller.js # Authentication controller
+  /errors
+    custom.errors.js # Cutom resuable errors
   /middlewares
     auth.middleware.js # Middleware for token authentication
+    errorHandler.middleware.js # Middleware for handling errors
   /models
     user.js         # User model
   /routes
-    auth.routes.js   # Authentication routes
+    auth.routes.js  # Authentication routes
   .env              # Environment variables
   app.js            # Main application file
   package.json      # Project metadata and dependencies
@@ -111,10 +131,6 @@ Access the Swagger UI for API documentation at:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Contributing
-
-We welcome contributions to enhance this project! Please fork the repository and submit a pull request with your changes.
-
 ## Contact
 
-For any questions or suggestions, please contact [hish.abdelshafouk@gmail.com.com].
+For any questions or suggestions, please contact [hish.abdelshafouk@gmail.com].
