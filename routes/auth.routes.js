@@ -7,6 +7,7 @@ const {
   checkEmailAvailability,
   requestPasswordReset,
   resetPassword,
+  updateProfile,
 } = require("../controllers/auth.controller");
 const router = express.Router();
 
@@ -276,5 +277,51 @@ router.post("/request-password-reset", requestPasswordReset);
  *         description: Internal server error
  */
 router.post("/reset-password", resetPassword);
+
+/**
+ * @swagger
+ * /api/auth/update-profile/{userId}:
+ *   put:
+ *     summary: Update user profile
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The user ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *             example:
+ *               username: johndoe
+ *               email: johndoe@example.com
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.put("/update-profile/:userId", updateProfile);
 
 module.exports = router;
